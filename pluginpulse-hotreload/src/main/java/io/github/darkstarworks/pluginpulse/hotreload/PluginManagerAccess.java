@@ -37,34 +37,40 @@ final class PluginManagerAccess {
      * @throws IllegalStateException when no known bookkeeping layout is found
      */
     static void removeFromManager(Object pluginManager, Plugin plugin) throws ReflectiveOperationException {
-        Object holder = findBookkeepingHolder(pluginManager);
-        if (holder == null) {
+        List<Object> holders = findBookkeepingHolders(pluginManager);
+        if (holders.isEmpty()) {
             throw new IllegalStateException("Unrecognized plugin manager internals ("
                     + pluginManager.getClass().getName() + ") — cannot hot reload on this server version.");
         }
-        Object pluginsField = getFieldValue(holder, "plugins");
-        if (pluginsField instanceof List<?> plugins) {
-            plugins.remove(plugin);
-        }
-        Object lookupField = getFieldValue(holder, "lookupNames");
-        if (lookupField instanceof Map<?, ?> lookup) {
-            lookup.values().removeIf(v -> v == plugin);
+        // On modern Paper the legacy SimplePluginManager STILL declares (dead)
+        // plugins/lookupNames fields while the live bookkeeping sits in the
+        // delegated PaperPluginInstanceManager — scrub every holder found.
+        for (Object holder : holders) {
+            Object pluginsField = getFieldValue(holder, "plugins");
+            if (pluginsField instanceof List<?> plugins) {
+                plugins.remove(plugin);
+            }
+            Object lookupField = getFieldValue(holder, "lookupNames");
+            if (lookupField instanceof Map<?, ?> lookup) {
+                lookup.values().removeIf(v -> v == plugin);
+            }
         }
     }
 
     /**
      * Breadth-first walk from the plugin manager through known delegation
-     * fields to the object that owns both {@code plugins} and
+     * fields, collecting every object that owns both {@code plugins} and
      * {@code lookupNames}.
      */
-    static Object findBookkeepingHolder(Object root) {
+    static List<Object> findBookkeepingHolders(Object root) {
+        List<Object> holders = new java.util.ArrayList<>();
         Deque<Object> queue = new ArrayDeque<>();
         queue.add(root);
         int depth = 0;
         while (!queue.isEmpty() && depth++ < 8) {
             Object candidate = queue.poll();
             if (hasField(candidate, "plugins") && hasField(candidate, "lookupNames")) {
-                return candidate;
+                holders.add(candidate);
             }
             for (String delegate : DELEGATE_FIELDS) {
                 try {
@@ -75,7 +81,7 @@ final class PluginManagerAccess {
                 }
             }
         }
-        return null;
+        return holders;
     }
 
     private static boolean hasField(Object obj, String name) {

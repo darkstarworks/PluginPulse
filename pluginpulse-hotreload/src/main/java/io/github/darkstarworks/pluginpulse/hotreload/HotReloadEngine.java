@@ -69,6 +69,16 @@ public final class HotReloadEngine implements ReloadEngine {
                     + " (file still locked?) — the update will apply on restart instead", e);
         }
 
+        // Paper remaps plugin jars into <plugins>/.paper-remapped/<name>; the
+        // cache can serve the OLD bytes for the swapped-in jar since the
+        // filename is unchanged. Drop the cached copy so it re-remaps.
+        try {
+            Path remapped = liveJar.getParent().resolve(".paper-remapped").resolve(liveJar.getFileName().toString());
+            Files.deleteIfExists(remapped);
+        } catch (IOException e) {
+            logger.fine("Could not clear remap cache: " + e.getMessage());
+        }
+
         try {
             loadAndEnable(liveJar, logger);
             logger.info("Hot reload of " + name + " complete.");
