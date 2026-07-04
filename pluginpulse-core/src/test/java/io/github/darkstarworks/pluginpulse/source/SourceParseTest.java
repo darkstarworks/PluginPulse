@@ -48,6 +48,29 @@ class SourceParseTest {
         assertTrue(info.releasePageUrl().contains("myplugin/version/abc123"));
     }
 
+    private static final String MODRINTH_DUAL_TRACK_JSON = """
+            [
+              {"id": "a", "version_number": "1.7.3-mc26", "changelog": "",
+               "files": [{"url": "u26", "filename": "p-1.7.3-mc26.jar", "primary": true, "size": 1, "hashes": {}}]},
+              {"id": "b", "version_number": "1.7.3", "changelog": "",
+               "files": [{"url": "u", "filename": "p-1.7.3.jar", "primary": true, "size": 1, "hashes": {}}]}
+            ]
+            """;
+
+    @Test
+    void modrinthWithoutTrackSkipsSuffixedVersions() {
+        UpdateInfo info = ModrinthSource.parse(MODRINTH_DUAL_TRACK_JSON, null, "p");
+        assertEquals("1.7.3", info.version());
+        assertEquals("p-1.7.3.jar", info.fileName());
+    }
+
+    @Test
+    void modrinthWithTrackPicksSuffixedVersion() {
+        UpdateInfo info = ModrinthSource.parse(MODRINTH_DUAL_TRACK_JSON, "mc26", "p");
+        assertEquals("1.7.3-mc26", info.version());
+        assertEquals("p-1.7.3-mc26.jar", info.fileName());
+    }
+
     @Test
     void modrinthFallsBackWhenTrackUnpublished() {
         UpdateInfo info = ModrinthSource.parse(MODRINTH_JSON, "mc26", "myplugin");

@@ -76,13 +76,17 @@ public final class ModrinthSource implements UpdateSource {
                     chosen = v;
                     break;
                 }
-            } else {
+            } else if (!number.contains("-")) {
+                // No track configured: skip suffixed builds (other tracks,
+                // pre-releases) — otherwise a dual-track project's newest
+                // "-mc26" upload would be served to every server.
                 chosen = v;
                 break;
             }
         }
-        if (chosen == null && !versions.isEmpty() && track != null) {
-            // Track requested but never published on Modrinth: fall back to newest.
+        if (chosen == null && !versions.isEmpty()) {
+            // Requested track never published (or every version is suffixed):
+            // fall back to the newest entry.
             chosen = versions.get(0).getAsJsonObject();
         }
         if (chosen == null) return null;
