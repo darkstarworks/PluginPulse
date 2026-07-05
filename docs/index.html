@@ -27,24 +27,40 @@
     <li>
       <h2>1. Choose your plugin jar</h2>
       <input type="file" id="file" accept=".jar">
-      <button id="inspect" type="button">Inspect (optional)</button>
-      <pre id="inspectOut" class="inspect"></pre>
-      <p class="hint">Inspect shows the detected plugin name, main class, and whether the tool can process it —
-        without changing anything.</p>
+      <button id="preview" type="button">Preview jar</button>
+      <pre id="previewOut" class="inspect"></pre>
+      <p class="hint">Use this to review the current plugin and author details before making any changes.
+        Nothing is modified — if the jar can't be processed, you'll get a plain-English explanation.</p>
     </li>
 
     <li>
       <h2>2. Where do updates come from?</h2>
-      <p class="hint">Fill in <em>at least one</em>. The first is primary; the rest are fallbacks.</p>
-      <label>Modrinth project slug
-        <input id="modrinth" type="text" placeholder="e.g. my-plugin (from modrinth.com/plugin/<slug>)">
-      </label>
-      <label>GitHub repository
-        <input id="github" type="text" placeholder="e.g. owner/repo (uses Releases)">
-      </label>
-      <label>Hangar project slug
-        <input id="hangar" type="text" placeholder="e.g. my-plugin (from hangar.papermc.io)">
-      </label>
+      <p class="hint">Plugin updating will only work if at least one of these is available.
+        They're checked in order, so put your main source first.</p>
+
+      <div class="source">
+        <div class="source-head">
+          <span class="source-name">Modrinth</span>
+          <span class="source-url">modrinth.com/plugin/<span class="slug">viaversion</span></span>
+        </div>
+        <input id="modrinth" type="text" placeholder="viaversion">
+      </div>
+
+      <div class="source">
+        <div class="source-head">
+          <span class="source-name">GitHub</span>
+          <span class="source-url">github.com/<span class="slug">ViaVersion/ViaVersion</span></span>
+        </div>
+        <input id="github" type="text" placeholder="ViaVersion/ViaVersion">
+      </div>
+
+      <div class="source">
+        <div class="source-head">
+          <span class="source-name">Hangar</span>
+          <span class="source-url">hangar.papermc.io/kennytv/<span class="slug">ViaVersion</span></span>
+        </div>
+        <input id="hangar" type="text" placeholder="ViaVersion">
+      </div>
     </li>
 
     <li>
@@ -98,6 +114,8 @@
     <p class="foot"><a href="https://github.com/darkstarworks/PluginPulse">PluginPulse on GitHub</a></p>
   </section>
 </main>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
 
 <script src="lib/jszip.min.js"></script>
 <script src="engine/constant-pool.js"></script>

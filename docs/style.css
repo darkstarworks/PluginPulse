@@ -7,6 +7,7 @@
   --accent-ink: #1a1204;
   --ok: #57d38c;
   --err: #ff6b6b;
+  --warn: #ffcf6b;
   --line: #262c34;
 }
 
@@ -103,6 +104,76 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
 .status { min-height: 1.3em; margin: .6rem 0 0; font-size: .92rem; }
 .status.ok { color: var(--ok); }
 .status.err { color: var(--err); }
+.status.warn { color: var(--warn); }
+
+/* Update-source examples (step 2) */
+.source { margin: .9rem 0 0; }
+.source:first-of-type { margin-top: .3rem; }
+.source-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-bottom: .3rem;
+}
+.source-name { color: var(--ink); font-weight: 600; font-size: .95rem; }
+.source-url {
+  color: var(--muted);
+  font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.source-url .slug {
+  color: var(--accent-ink);
+  background: var(--accent);
+  padding: 0 .3em;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* Toasts */
+.toasts {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  max-width: min(380px, calc(100vw - 2rem));
+}
+.toast {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--muted);
+  border-radius: 9px;
+  padding: .7rem 2rem .75rem .85rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.toast.show { opacity: 1; transform: none; }
+.toast.err { border-left-color: var(--err); }
+.toast.warn { border-left-color: var(--warn); }
+.toast.ok { border-left-color: var(--ok); }
+.toast-title { display: block; color: var(--ink); font-size: .95rem; margin-bottom: .25rem; }
+.toast.err .toast-title { color: var(--err); }
+.toast.warn .toast-title { color: var(--warn); }
+.toast.ok .toast-title { color: var(--ok); }
+.toast-line { color: var(--muted); font-size: .85rem; margin-top: .2rem; }
+.toast-x {
+  position: absolute;
+  top: .25rem;
+  right: .3rem;
+  margin: 0;
+  padding: 0 .35rem;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+.toast-x:hover { color: var(--ink); border: none; }
 
 .limits { margin-top: 1.5rem; color: var(--muted); }
 .limits code { color: var(--accent); background: #0d1014; padding: 0 .3em; border-radius: 4px; }

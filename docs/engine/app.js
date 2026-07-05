@@ -24,6 +24,37 @@
     el.className = 'status ' + (kind || '');
   }
 
+  /** Plain-English notice. { title, lines:[], kind:'err'|'warn'|'ok', timeout }. */
+  function toast({ title, lines, kind, timeout }) {
+    const wrap = $('toasts');
+    if (!wrap) return;
+    const el = document.createElement('div');
+    el.className = 'toast ' + (kind || '');
+    if (title) {
+      const h = document.createElement('strong');
+      h.className = 'toast-title';
+      h.textContent = title;
+      el.appendChild(h);
+    }
+    (lines || []).forEach((line) => {
+      const p = document.createElement('div');
+      p.className = 'toast-line';
+      p.textContent = line;
+      el.appendChild(p);
+    });
+    const close = document.createElement('button');
+    close.className = 'toast-x';
+    close.type = 'button';
+    close.textContent = '×';
+    close.setAttribute('aria-label', 'Dismiss');
+    el.appendChild(close);
+    wrap.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    const hide = () => { el.classList.remove('show'); setTimeout(() => el.remove(), 250); };
+    const timer = setTimeout(hide, timeout || 10000);
+    close.addEventListener('click', () => { clearTimeout(timer); hide(); });
+  }
+
   function readOptions() {
     return {
       modrinth: $('modrinth').value.trim(),
@@ -41,7 +72,7 @@
 
   function onFile(e) {
     selectedFile = e.target.files[0] || null;
-    $('inspectOut').textContent = '';
+    $('previewOut').textContent = '';
     if (selectedFile) status('Selected ' + selectedFile.name + '.', '');
   }
 
@@ -49,22 +80,66 @@
     return new Uint8Array(await selectedFile.arrayBuffer());
   }
 
-  async function inspect() {
-    if (!selectedFile) { status('Choose a plugin jar first.', 'err'); return; }
+  async function preview() {
+    if (!selectedFile) {
+      toast({ kind: 'err', title: 'No jar chosen yet', lines: ['Pick a plugin .jar in step 1 first.'] });
+      return;
+    }
     try {
-      status('Inspecting…', '');
+      status('Reading jar…', '');
       const info = await window.PPInjector.inspectJar(await fileBytes());
-      $('inspectOut').textContent =
-        'descriptor : ' + info.descriptor + '\n' +
-        'main       : ' + info.main + '\n' +
-        'strategy   : ' + info.strategy + '\n' +
-        'final main : ' + info.finalMain + '\n' +
-        'injected   : ' + info.alreadyInjected;
-      status(info.finalMain
-        ? 'This jar has a final main — the web tool can\'t process it. Use the command-line tool.'
-        : 'Looks good — fill in the fields and Generate.', info.finalMain ? 'err' : 'ok');
+      const authors = info.authors && info.authors.length ? info.authors.join(', ') : 'not listed in the jar';
+      $('previewOut').textContent =
+        'Plugin      : ' + (info.name || '(name not in descriptor)') + '\n' +
+        'Version     : ' + (info.version || '(not listed)') + '\n' +
+        'Author(s)   : ' + authors + '\n' +
+        'Main class  : ' + info.main + '\n' +
+        'Descriptor  : ' + info.descriptor + '\n' +
+        'Updatable by this tool : ' + (info.finalMain ? 'No' : 'Yes') +
+        (info.alreadyInjected ? '\nAlready has PluginPulse : Yes' : '');
+
+      if (info.finalMain) {
+        status('This jar can\'t be processed in the browser.', 'err');
+        toast({
+          kind: 'err',
+          title: 'This jar can\'t be updated by the web tool',
+          lines: [
+            'Its main class is marked final, so the in-browser wrapper can\'t attach to it.',
+            'Recommended: run the command-line tool pluginpulse-inject, which patches the jar in place.',
+            'Or ask the plugin author to add PluginPulse when they build it.',
+          ],
+          timeout: 14000,
+        });
+      } else if (info.alreadyInjected) {
+        status('This jar already has PluginPulse.', 'warn');
+        toast({
+          kind: 'warn',
+          title: 'This jar already has PluginPulse',
+          lines: [
+            'To change its update settings, tick "Re-inject a jar that already has PluginPulse" in step 3, then Generate.',
+          ],
+        });
+      } else {
+        status('Looks good — fill in the fields and Generate.', 'ok');
+      }
     } catch (err) {
-      status('Inspect failed: ' + err.message, 'err');
+      status('Preview failed.', 'err');
+      if (/no plugin\.yml/i.test(err.message)) {
+        toast({
+          kind: 'err',
+          title: 'That doesn\'t look like a Paper/Spigot plugin',
+          lines: [
+            'No plugin.yml or paper-plugin.yml with a main class was found inside the jar.',
+            'Make sure you picked the plugin jar itself — not a library, a source archive, or a mod for a different platform.',
+          ],
+        });
+      } else {
+        toast({
+          kind: 'err',
+          title: 'Couldn\'t read that jar',
+          lines: [err.message, 'If it is a valid plugin jar, try re-downloading it — the file may be corrupted.'],
+        });
+      }
     }
   }
 
@@ -81,11 +156,19 @@
   }
 
   async function generate() {
-    if (!selectedFile) { status('Choose a plugin jar first.', 'err'); return; }
-    if (!$('rights').checked) { status('Please confirm you have the right to modify and redistribute this jar.', 'err'); return; }
+    if (!selectedFile) {
+      toast({ kind: 'err', title: 'No jar chosen yet', lines: ['Pick a plugin .jar in step 1 first.'] });
+      return;
+    }
+    if (!$('rights').checked) {
+      toast({ kind: 'err', title: 'One box left to tick',
+        lines: ['Confirm in step 4 that you have the right to modify and redistribute this jar.'] });
+      return;
+    }
     const opts = readOptions();
     if (!opts.modrinth && !opts.github && !opts.hangar) {
-      status('Provide at least one update source (Modrinth, GitHub, or Hangar).', 'err');
+      toast({ kind: 'err', title: 'No update source given',
+        lines: ['Fill in at least one of Modrinth, GitHub, or Hangar in step 2 so the plugin knows where to look.'] });
       return;
     }
     try {
@@ -94,15 +177,19 @@
       const out = await window.PPInjector.injectJar(await fileBytes(), opts, a);
       const base = selectedFile.name.replace(/\.jar$/i, '');
       download(out, base + '-pulse.jar');
-      status('Done — downloaded ' + base + '-pulse.jar. Test it on your own server before distributing.', 'ok');
+      status('Done — downloaded ' + base + '-pulse.jar.', 'ok');
+      toast({ kind: 'ok', title: 'Updated jar downloaded',
+        lines: [base + '-pulse.jar is in your downloads.', 'Test it on your own server before sharing it — the tool can\'t confirm the jar boots.'] });
     } catch (err) {
-      status('Could not process this jar: ' + err.message, 'err');
+      status('Could not process this jar.', 'err');
+      toast({ kind: 'err', title: 'Couldn\'t generate the jar',
+        lines: [err.message, 'Try Preview jar first to check the plugin can be processed.'] });
     }
   }
 
   window.addEventListener('DOMContentLoaded', () => {
     $('file').addEventListener('change', onFile);
-    $('inspect').addEventListener('click', inspect);
+    $('preview').addEventListener('click', preview);
     $('generate').addEventListener('click', generate);
   });
 })();

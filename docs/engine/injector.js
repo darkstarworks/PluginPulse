@@ -69,7 +69,38 @@
       (u.endsWith('.SF') || u.endsWith('.RSA') || u.endsWith('.EC') || u.endsWith('.DSA'));
   }
 
-  /** Inspect without modifying — powers the "Inspect" button. */
+  /** Pull human-readable metadata out of a plugin.yml / paper-plugin.yml body. */
+  function parseMeta(text) {
+    const scalar = (key) => {
+      const m = text.match(new RegExp('^\\s*' + key + ':\\s*(.+?)\\s*$', 'm'));
+      return m ? m[1].trim().replace(/^['"]|['"]$/g, '') : null;
+    };
+    const authors = [];
+    const single = scalar('author');
+    if (single) authors.push(single);
+    const inline = text.match(/^\s*authors:\s*\[(.+?)\]\s*$/m);
+    if (inline) {
+      inline[1].split(',').forEach((a) => {
+        const v = a.trim().replace(/^['"]|['"]$/g, '');
+        if (v) authors.push(v);
+      });
+    } else {
+      const block = text.match(/^\s*authors:\s*\n((?:[ \t]*-[ \t]*.+\n?)+)/m);
+      if (block) {
+        block[1].split('\n').forEach((line) => {
+          const mm = line.match(/^[ \t]*-[ \t]*(.+?)\s*$/);
+          if (mm) authors.push(mm[1].replace(/^['"]|['"]$/g, ''));
+        });
+      }
+    }
+    return {
+      name: scalar('name'),
+      version: scalar('version'),
+      authors: [...new Set(authors.filter(Boolean))],
+    };
+  }
+
+  /** Inspect without modifying — powers the "Preview jar" button. */
   async function inspectJar(jarBytes) {
     const JSZip = getJSZip();
     const zip = await JSZip.loadAsync(jarBytes);
@@ -78,9 +109,13 @@
     let finalMain = false;
     const mainEntry = zip.file(desc.main.replace(/\./g, '/') + '.class');
     if (mainEntry) finalMain = CP.isFinal(await mainEntry.async('uint8array'));
+    const meta = parseMeta(desc.text);
     return {
       descriptor: desc.entry,
       main: desc.main,
+      name: meta.name,
+      version: meta.version,
+      authors: meta.authors,
       finalMain,
       alreadyInjected: hasPluginPulse(zip),
       strategy: finalMain ? 'INSTRUMENT (unsupported in-browser)' : 'WRAPPER',
