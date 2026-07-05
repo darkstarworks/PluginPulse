@@ -54,6 +54,10 @@
     if (o.modrinth) lines.push('modrinth: ' + o.modrinth);
     if (o.github) lines.push('github: ' + o.github);
     if (o.hangar) lines.push('hangar: ' + o.hangar);
+    // Explicit check order (primary first). Only meaningful with 2+ sources.
+    if (o.sourceOrder && o.sourceOrder.length > 1) {
+      lines.push('source-order: [' + o.sourceOrder.join(', ') + ']');
+    }
     if (o.permission) lines.push('permission: ' + o.permission);
     if (o.commandRoot) lines.push('command-root: ' + o.commandRoot);
     if (o.contact) lines.push('user-agent-contact: "' + o.contact + '"');

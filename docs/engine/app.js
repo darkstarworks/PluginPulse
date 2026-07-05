@@ -56,10 +56,19 @@
   }
 
   function readOptions() {
+    // Order the filled-in sources by their chosen priority (#1 first). Ties fall
+    // back to the on-screen order (modrinth, github, hangar).
+    const prio = (id) => parseInt($(id + '-priority').value, 10) || 9;
+    const sourceOrder = [
+      { k: 'modrinth', v: $('modrinth').value.trim(), p: prio('modrinth'), d: 0 },
+      { k: 'github', v: $('github').value.trim(), p: prio('github'), d: 1 },
+      { k: 'hangar', v: $('hangar').value.trim(), p: prio('hangar'), d: 2 },
+    ].filter((s) => s.v).sort((a, b) => a.p - b.p || a.d - b.d).map((s) => s.k);
     return {
       modrinth: $('modrinth').value.trim(),
       github: $('github').value.trim(),
       hangar: $('hangar').value.trim(),
+      sourceOrder: sourceOrder,
       permission: $('permission').value.trim(),
       commandRoot: $('commandRoot').value.trim(),
       mode: $('mode').value,

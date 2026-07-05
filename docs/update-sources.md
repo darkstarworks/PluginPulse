@@ -4,8 +4,20 @@ PluginPulse checks one or more **sources** to learn when a new version of a
 plugin is out. You need at least one. This page explains how to find the right
 identifier for each. It's shared by all three guides.
 
-You can list more than one — the first is the **primary**, the rest are
-**fallbacks** tried in order if the primary is unreachable.
+You can list more than one — one is the **primary** and the rest are
+**fallbacks** tried in order if the primary is unreachable. By default the order
+is Modrinth, then GitHub, then Hangar. To choose your own order, add a
+`source-order` list (primary first); any source you leave out is appended after
+the ones you list:
+
+```yaml
+modrinth: my-plugin
+github: me/my-plugin
+source-order: [github, modrinth]   # check GitHub first, Modrinth as fallback
+```
+
+In the web tool, use the **priority** dropdown next to each source instead — it
+writes `source-order` for you.
 
 ## Modrinth
 

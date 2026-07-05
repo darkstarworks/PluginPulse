@@ -121,6 +121,14 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
   color: var(--muted);
   font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+.source-input { display: flex; gap: .5rem; align-items: flex-start; }
+.source-input input { flex: 1 1 auto; }
+select.prio {
+  width: auto;
+  flex: 0 0 auto;
+  padding: .55rem .5rem;
+  color: var(--ink);
+}
 .source-url .slug {
   color: var(--accent-ink);
   background: var(--accent);

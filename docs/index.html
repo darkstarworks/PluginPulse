@@ -36,14 +36,19 @@
     <li>
       <h2>2. Where do updates come from?</h2>
       <p class="hint">Plugin updating will only work if at least one of these is available.
-        They're checked in order, so put your main source first.</p>
+        Set the priority (#1 is checked first) to choose the order they're tried in.</p>
 
       <div class="source">
         <div class="source-head">
           <span class="source-name">Modrinth</span>
           <span class="source-url">modrinth.com/plugin/<span class="slug">viaversion</span></span>
         </div>
-        <input id="modrinth" type="text" placeholder="viaversion">
+        <div class="source-input">
+          <input id="modrinth" type="text" placeholder="viaversion">
+          <select id="modrinth-priority" class="prio" aria-label="Modrinth priority">
+            <option value="1" selected>#1</option><option value="2">#2</option><option value="3">#3</option>
+          </select>
+        </div>
       </div>
 
       <div class="source">
@@ -51,7 +56,12 @@
           <span class="source-name">GitHub</span>
           <span class="source-url">github.com/<span class="slug">ViaVersion/ViaVersion</span></span>
         </div>
-        <input id="github" type="text" placeholder="ViaVersion/ViaVersion">
+        <div class="source-input">
+          <input id="github" type="text" placeholder="ViaVersion/ViaVersion">
+          <select id="github-priority" class="prio" aria-label="GitHub priority">
+            <option value="1">#1</option><option value="2" selected>#2</option><option value="3">#3</option>
+          </select>
+        </div>
       </div>
 
       <div class="source">
@@ -59,7 +69,12 @@
           <span class="source-name">Hangar</span>
           <span class="source-url">hangar.papermc.io/kennytv/<span class="slug">ViaVersion</span></span>
         </div>
-        <input id="hangar" type="text" placeholder="ViaVersion">
+        <div class="source-input">
+          <input id="hangar" type="text" placeholder="ViaVersion">
+          <select id="hangar-priority" class="prio" aria-label="Hangar priority">
+            <option value="1">#1</option><option value="2">#2</option><option value="3" selected>#3</option>
+          </select>
+        </div>
       </div>
     </li>
 

@@ -84,10 +84,27 @@ public final class PluginPulse {
                     .checkInterval(Duration.ofHours(Math.max(1L, intervalHours)));
 
             // First declared source is primary; the rest are ordered fallbacks.
+            // The order is taken from the optional "source-order" list when present
+            // (e.g. [hangar, modrinth]); any configured source omitted from the list
+            // is appended afterwards, and the historical default is modrinth > github
+            // > hangar when no list is given.
+            java.util.Map<String, io.github.darkstarworks.pluginpulse.source.UpdateSource> available = new java.util.LinkedHashMap<>();
+            if (modrinth != null) available.put("modrinth", new ModrinthSource(modrinth));
+            if (github != null) available.put("github", new GitHubReleasesSource(github));
+            if (hangar != null) available.put("hangar", new HangarSource(hangar));
+
+            java.util.List<String> ordered = new java.util.ArrayList<>();
+            for (String raw : cfg.getStringList("source-order")) {
+                if (raw == null) continue;
+                String key = raw.trim().toLowerCase(java.util.Locale.ROOT);
+                if (available.containsKey(key) && !ordered.contains(key)) ordered.add(key);
+            }
+            for (String key : available.keySet()) {
+                if (!ordered.contains(key)) ordered.add(key);
+            }
+
             boolean primarySet = false;
-            if (modrinth != null) primarySet = addSource(builder, new ModrinthSource(modrinth), primarySet);
-            if (github != null) primarySet = addSource(builder, new GitHubReleasesSource(github), primarySet);
-            if (hangar != null) primarySet = addSource(builder, new HangarSource(hangar), primarySet);
+            for (String key : ordered) primarySet = addSource(builder, available.get(key), primarySet);
 
             String permission = trimToNull(cfg.getString("permission"));
             if (permission != null) builder.permission(permission);
