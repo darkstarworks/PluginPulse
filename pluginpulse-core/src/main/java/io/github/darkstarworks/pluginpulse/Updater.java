@@ -53,6 +53,8 @@ public final class Updater {
     private final UpdateMode mode;
     private final Duration checkInterval;
     private final String permission;
+    private final String commandRoot;
+    private final boolean selfRegisterCommand;
     private final String track;
     private final String changelogUrl;
     private final SchedulerAdapter scheduler;
@@ -71,6 +73,7 @@ public final class Updater {
     private volatile String stagedVersion;
     private SchedulerAdapter.TaskHandle periodicTask;
     private JoinNotifyListener joinListener;
+    private CommandRegistration commandRegistration;
 
     private Updater(Builder b) {
         this.plugin = b.plugin;
@@ -79,6 +82,8 @@ public final class Updater {
         this.mode = b.mode;
         this.checkInterval = b.checkInterval;
         this.permission = b.permission;
+        this.commandRoot = b.commandRoot;
+        this.selfRegisterCommand = b.selfRegisterCommand;
         this.track = b.track;
         this.changelogUrl = b.changelogUrl;
         this.scheduler = b.scheduler != null ? b.scheduler : SchedulerAdapter.create(b.plugin);
@@ -107,6 +112,15 @@ public final class Updater {
             joinListener = new JoinNotifyListener(this);
             Bukkit.getPluginManager().registerEvents(joinListener, plugin);
         }
+        // Self-register the root command when one is configured and its name is
+        // free. Adopters that declare their own command in plugin.yml keep it
+        // (the name is taken → skipped); injected/one-file jars gain a working
+        // /<root> update command they otherwise couldn't wire.
+        if (commandRoot != null && selfRegisterCommand) {
+            commandRegistration = new CommandRegistration(
+                    plugin, commandRoot, new UpdateSubcommand(this), permission);
+            scheduler.runGlobal(commandRegistration::register);
+        }
         long periodTicks = checkInterval.toSeconds() * 20L;
         // Small startup delay + jitter so fleets of servers don't check in lockstep.
         long delayTicks = 100L + ThreadLocalRandom.current().nextLong(0, 200);
@@ -121,6 +135,10 @@ public final class Updater {
         if (joinListener != null) {
             HandlerList.unregisterAll(joinListener);
             joinListener = null;
+        }
+        if (commandRegistration != null) {
+            commandRegistration.unregister();
+            commandRegistration = null;
         }
     }
 
@@ -417,6 +435,7 @@ public final class Updater {
         private String permission;
         private String prefix;
         private String commandRoot;
+        private boolean selfRegisterCommand = true;
         private String track;
         private String changelogUrl;
         private String userAgentContact;
@@ -481,6 +500,19 @@ public final class Updater {
         /** Root command (e.g. {@code "/tcp"}) that enables clickable action buttons. */
         public Builder commandRoot(String commandRoot) {
             this.commandRoot = commandRoot;
+            return this;
+        }
+
+        /**
+         * Whether to self-register {@code command-root} as a server command when
+         * its name is free (default true). A plugin that declares its command in
+         * {@code plugin.yml} keeps that command untouched (the name is taken, so
+         * registration is skipped); injected or one-file adopters rely on this to
+         * get a working {@code /<root> update} command. Set false to suppress it
+         * entirely and wire update delegation through your own command.
+         */
+        public Builder selfRegisterCommand(boolean selfRegister) {
+            this.selfRegisterCommand = selfRegister;
             return this;
         }
 

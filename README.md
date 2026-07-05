@@ -60,11 +60,12 @@ github: me/my-plugin             # GitHub "owner/repo" for Releases (optional)
 hangar: my-project               # Hangar project slug (optional)
 
 permission: myplugin.admin       # who sees notices / can run /myplugin update
-command-root: /myplugin          # enables clickable buttons in notices
+command-root: /myplugin          # enables clickable buttons; self-registered if free
 user-agent-contact: you@example.com   # required by Modrinth's API rules
 mode: notify                     # off | check-only | notify | download | auto-stage
 check-interval-hours: 6
 # track: mc26                    # optional: follow a "-<track>" release line
+# self-register-command: true    # default true; see below
 ```
 
 **2.** Three lines in your plugin:
@@ -76,6 +77,20 @@ check-interval-hours: 6
 // in your command executor, when the first arg is "update":
 //   PluginPulse.handleUpdateCommand(this, sender, Arrays.copyOfRange(args, 1, args.length));
 ```
+
+**Self-registered command.** When `command-root` is set, PluginPulse registers a
+matching command (`/myplugin update ...`) straight into the server's command map
+if — and only if — that name is not already taken. So:
+
+- If your plugin **already declares** `command-root` in its `plugin.yml`, that
+  command is left untouched and you delegate `update` to
+  `PluginPulse.handleUpdateCommand(...)` as shown above.
+- If it **doesn't** (injected jars, or a one-file adopter who'd rather not write a
+  command class), you get a working `/myplugin update` for free — no descriptor
+  entry, no executor.
+
+Registration is fail-soft across Spigot/Paper/Folia and never throws into your
+lifecycle; set `self-register-command: false` to opt out.
 
 That's it. Server owners can override `mode` and `check-interval-hours` from an
 `update:` section in your plugin's own `config.yml` without you doing anything.

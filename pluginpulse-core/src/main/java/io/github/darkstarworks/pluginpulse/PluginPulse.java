@@ -93,6 +93,11 @@ public final class PluginPulse {
             if (permission != null) builder.permission(permission);
             String commandRoot = trimToNull(cfg.getString("command-root"));
             if (commandRoot != null) builder.commandRoot(commandRoot);
+            // Self-registration is on by default and no-ops when the host already
+            // owns the command name; allow explicit opt-out via the descriptor.
+            if (cfg.contains("self-register-command")) {
+                builder.selfRegisterCommand(cfg.getBoolean("self-register-command", true));
+            }
             String contact = trimToNull(cfg.getString("user-agent-contact"));
             if (contact != null) builder.userAgentContact(contact);
             String prefix = trimToNull(cfg.getString("prefix"));
