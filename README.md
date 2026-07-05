@@ -1,7 +1,8 @@
 # PluginPulse
 
-A small, dependency-free update-checker library for Paper plugins. Shade it in,
-point it at where you publish releases, and your plugin gains:
+A small, dependency-free update-checker library for Paper **and Spigot**
+plugins. Shade it in, point it at where you publish releases, and your plugin
+gains:
 
 - **Multi-source update checking** — Modrinth, GitHub Releases, Hangar, or any
   self-hosted JSON manifest, with ordered fallbacks.
@@ -20,8 +21,10 @@ point it at where you publish releases, and your plugin gains:
 
 ## Requirements
 
-- Paper (or a fork) 1.20.5+, Java 21+.
-- No runtime dependencies: Adventure/MiniMessage and Gson are provided by Paper.
+- Paper (or a fork) 1.20.5+, **or Spigot 1.20.5+**, Java 21+.
+- No runtime dependencies. On Paper, notices render as rich clickable
+  MiniMessage; on Spigot (no Adventure) they automatically fall back to plain
+  text with the download URL spelled out — everything else works identically.
 
 ## Installation
 
@@ -33,7 +36,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.github.darkstarworks.PluginPulse:pluginpulse-core:v0.3.0")
+    implementation("com.github.darkstarworks.PluginPulse:pluginpulse-core:v0.4.0")
 }
 ```
 
@@ -45,7 +48,42 @@ tasks.shadowJar {
 }
 ```
 
-## Usage
+## Quick start (no code, one file)
+
+**1.** Drop a `pluginpulse.yml` into `src/main/resources/`:
+
+```yaml
+# Fill in whichever sources apply — the first one is primary, the rest are
+# fallbacks. You need at least one.
+modrinth: my-project-slug        # Modrinth project slug (optional)
+github: me/my-plugin             # GitHub "owner/repo" for Releases (optional)
+hangar: my-project               # Hangar project slug (optional)
+
+permission: myplugin.admin       # who sees notices / can run /myplugin update
+command-root: /myplugin          # enables clickable buttons in notices
+user-agent-contact: you@example.com   # required by Modrinth's API rules
+mode: notify                     # off | check-only | notify | download | auto-stage
+check-interval-hours: 6
+# track: mc26                    # optional: follow a "-<track>" release line
+```
+
+**2.** Three lines in your plugin:
+
+```java
+@Override public void onEnable()  { PluginPulse.bootstrap(this); }
+@Override public void onDisable() { PluginPulse.shutdown(this); }
+
+// in your command executor, when the first arg is "update":
+//   PluginPulse.handleUpdateCommand(this, sender, Arrays.copyOfRange(args, 1, args.length));
+```
+
+That's it. Server owners can override `mode` and `check-interval-hours` from an
+`update:` section in your plugin's own `config.yml` without you doing anything.
+
+## Advanced usage (builder)
+
+For custom sources (self-hosted manifests), message overrides, a supplied
+scheduler, or the hot-reload engine, use the builder directly:
 
 ```java
 public final class MyPlugin extends JavaPlugin {

@@ -427,9 +427,11 @@ public final class Updater {
         private ReloadEngine reloadEngine;
         private final Map<String, String> messageOverrides = new HashMap<>();
 
+        @SuppressWarnings("deprecation") // getDescription() works on both Paper and Spigot;
+        // getPluginMeta() is Paper-only and would NoSuchMethodError on Spigot.
         private Builder(JavaPlugin plugin) {
             this.plugin = plugin;
-            this.currentVersion = plugin.getPluginMeta().getVersion();
+            this.currentVersion = plugin.getDescription().getVersion();
             this.permission = plugin.getName().toLowerCase() + ".update";
             this.prefix = "<gold>[" + plugin.getName() + "]</gold>";
         }
