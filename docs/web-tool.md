@@ -52,9 +52,11 @@ server.** There's nothing to install and no account.
 
 ## Limits (read these)
 
-- **Wrapper strategy only.** If the plugin's main class is `final`, the tool
-  refuses it (Inspect will say so). Use the command-line tool `pluginpulse-inject`
-  instead — it instruments final mains in place. Everything else works in-browser.
+- **Wrapper strategy.** If the plugin's main class is `final` (the default for
+  Kotlin plugins), the tool clears that flag so the wrapper can subclass it —
+  removing `final` only permits subclassing and is safe for a plugin main class.
+  If you'd rather edit a final main in place, the command-line tool
+  `pluginpulse-inject` uses the instrument strategy instead.
 - **It can't confirm the jar runs.** Always test before distributing.
 - **Any class-file version works,** including Java 25 / mc26 jars, and both
   `plugin.yml` and `paper-plugin.yml` descriptors.

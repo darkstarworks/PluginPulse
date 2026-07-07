@@ -126,8 +126,10 @@
   <section class="limits">
     <h2>Limits</h2>
     <ul>
-      <li>Handles the <strong>wrapper</strong> strategy only. Jars whose main class is <code>final</code> are refused —
-        use the command-line tool <code>pluginpulse-inject</code>, which instruments them in place.</li>
+      <li>Uses the <strong>wrapper</strong> strategy. If the main class is <code>final</code> (the default for Kotlin
+        plugins), the tool clears that flag so the wrapper can attach — this only permits subclassing and is safe for
+        a plugin main class. For editing final mains in place instead, the CLI <code>pluginpulse-inject</code> uses the
+        instrument strategy.</li>
       <li>Works on any class-file version (including Java&nbsp;25 / mc26), legacy <code>plugin.yml</code> and
         <code>paper-plugin.yml</code>.</li>
       <li>It can't confirm the jar runs — always test before sharing.</li>

@@ -87,6 +87,17 @@ async function main() {
   // isFinal detection sanity: a non-final wrapper reads as non-final.
   ok(!CP.isFinal(wrapper), 'generated wrapper is not final');
 
+  // definalize: a final class (as Kotlin emits every plugin main) is cleared so
+  // the wrapper can subclass it, and the constant pool is left untouched.
+  const forced = CP.parseClass(wrapperTemplate);
+  forced.tail[1] |= 0x10; // force ACC_FINAL on
+  const finalBytes = CP.serializeClass(forced);
+  ok(CP.isFinal(finalBytes), 'test fixture reads as final before definalize');
+  const cleared = CP.definalize(finalBytes, ['onEnable', 'onDisable']);
+  ok(!CP.isFinal(cleared), 'definalize clears the class final flag');
+  ok(CP.parseClass(cleared).entries.length === forced.entries.length,
+    'definalize leaves the constant pool unchanged');
+
   console.log(failures === 0 ? '\nALL PASSED' : '\n' + failures + ' FAILED');
   process.exit(failures === 0 ? 0 : 1);
 }

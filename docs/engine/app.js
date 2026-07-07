@@ -140,22 +140,11 @@
         'Author(s)   : ' + authors + '\n' +
         'Main class  : ' + info.main + '\n' +
         'Descriptor  : ' + info.descriptor + '\n' +
-        'Updatable by this tool : ' + (info.finalMain ? 'No' : 'Yes') +
+        'Updatable by this tool : Yes' +
+        (info.finalMain ? '\nNote        : main class is final (typical for Kotlin) — the tool clears that flag so the updater can attach' : '') +
         (info.alreadyInjected ? '\nAlready has PluginPulse : Yes' : '');
 
-      if (info.finalMain) {
-        status('This jar can\'t be processed in the browser.', 'err');
-        toast({
-          kind: 'err',
-          title: 'This jar can\'t be updated by the web tool',
-          lines: [
-            'Its main class is marked final, so the in-browser wrapper can\'t attach to it.',
-            'Recommended: run the command-line tool pluginpulse-inject, which patches the jar in place.',
-            'Or ask the plugin author to add PluginPulse when they build it.',
-          ],
-          timeout: 14000,
-        });
-      } else if (info.alreadyInjected) {
+      if (info.alreadyInjected) {
         status('This jar already has PluginPulse.', 'warn');
         toast({
           kind: 'warn',

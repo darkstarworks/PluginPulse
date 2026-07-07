@@ -1,8 +1,10 @@
 /*
- * injector.js — in-browser WRAPPER-strategy injector. Mirrors the Java
- * reference engine (pluginpulse-inject) but does all class rewriting through the
- * constant-pool editor, so it needs no bytecode library and is class-version
- * agnostic. WRAPPER only: final main classes are refused with a pointer to the CLI.
+ * injector.js — in-browser WRAPPER-strategy injector. Does all class rewriting
+ * through the constant-pool editor, so it needs no bytecode library and is
+ * class-version agnostic. A final main class (the default for Kotlin plugins) is
+ * de-finalized first so the wrapper can subclass it — clearing final only permits
+ * subclassing, which is safe for a plugin main class. (The CLI, pluginpulse-inject,
+ * instead instruments final mains in place; either produces a working updater.)
  *
  * injectJar(jarBytes, opts, assets) -> Promise<Uint8Array>
  *   opts   : { modrinth, github, hangar, permission, commandRoot, mode, contact,
@@ -122,7 +124,7 @@
       authors: meta.authors,
       finalMain,
       alreadyInjected: hasPluginPulse(zip),
-      strategy: finalMain ? 'INSTRUMENT (unsupported in-browser)' : 'WRAPPER',
+      strategy: finalMain ? 'WRAPPER (clears the class final flag)' : 'WRAPPER',
     };
   }
 
@@ -139,16 +141,18 @@
       throw new Error('This jar already contains PluginPulse. Enable "re-inject" to proceed.');
     }
 
-    const mainEntry = zip.file(desc.main.replace(/\./g, '/') + '.class');
+    const mainInternal = desc.main.replace(/\./g, '/');
+    const mainPath = mainInternal + '.class';
+    const mainEntry = zip.file(mainPath);
     if (mainEntry) {
+      // Kotlin compiles every class as final by default, which would stop the
+      // wrapper from subclassing the main. Clear ACC_FINAL on the class (and on
+      // the two lifecycle methods the wrapper overrides, for the rare method-final
+      // plugin). Removing final only permits subclassing — safe for a main class.
       const mainBytes = await mainEntry.async('uint8array');
-      if (CP.isFinal(mainBytes)) {
-        throw new Error('The main class ' + desc.main + ' is final and cannot be subclassed. '
-          + 'Use the command-line tool (pluginpulse-inject), which instruments final mains in place.');
-      }
+      zip.file(mainPath, CP.definalize(mainBytes, ['onEnable', 'onDisable']));
     }
 
-    const mainInternal = desc.main.replace(/\./g, '/');
     const slash = mainInternal.lastIndexOf('/');
     const pkgInternal = slash >= 0 ? mainInternal.slice(0, slash) : '';
     const relocInternal = pkgInternal ? pkgInternal + '/pluginpulse' : 'pluginpulse';

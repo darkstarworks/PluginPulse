@@ -130,7 +130,66 @@
     return (readAccessFlags(bytes) & 0x0010) !== 0;
   }
 
-  const api = { parseClass, serializeClass, editClassUtf8, readAccessFlags, isFinal, replaceBytes };
+  /**
+   * Return a copy of the class with ACC_FINAL (0x0010) cleared on the class
+   * itself and on any method whose name is in methodNames. Kotlin compiles every
+   * class as final by default, which blocks the wrapper from subclassing the
+   * plugin main; clearing it only permits subclassing (safe for a plugin main
+   * class), and clearing it on the lifecycle methods the wrapper overrides keeps
+   * the rare method-final plugin loading. Version-agnostic — it only flips
+   * access_flags u2 values and never touches the constant pool or any code.
+   */
+  function definalize(bytes, methodNames) {
+    const FINAL = 0x0010;
+    const parsed = parseClass(bytes);
+    const tail = parsed.tail; // fresh buffer from bytes.slice — safe to mutate
+    const dv = new DataView(tail.buffer, tail.byteOffset, tail.byteLength);
+
+    // Class access_flags = first u2 of the tail.
+    dv.setUint16(0, dv.getUint16(0) & ~FINAL);
+
+    const names = new Set(methodNames || []);
+    if (names.size === 0) return serializeClass(parsed);
+
+    // Map constant-pool index -> entry, accounting for Long/Double double slots.
+    const cpByIndex = {};
+    let cpIndex = 1;
+    for (const e of parsed.entries) {
+      cpByIndex[cpIndex] = e;
+      cpIndex += (e.tag === 5 || e.tag === 6) ? 2 : 1;
+    }
+    const dec = new TextDecoder('latin1');
+    const utf8At = (idx) => {
+      const e = cpByIndex[idx];
+      return e && e.tag === 1 ? dec.decode(e.data) : null;
+    };
+
+    // tail layout: access_flags(2) this_class(2) super_class(2) interfaces then
+    // fields then methods. Fields and methods share the member_info shape.
+    let o = 6;
+    o += 2 + dv.getUint16(o) * 2; // interfaces_count + interfaces
+    const walkMembers = (mutate) => {
+      const count = dv.getUint16(o); o += 2;
+      for (let i = 0; i < count; i++) {
+        const memberOffset = o;
+        const accessFlags = dv.getUint16(o);
+        const nameIndex = dv.getUint16(o + 2);
+        const attrCount = dv.getUint16(o + 6);
+        o += 8; // access(2) name(2) desc(2) attrCount(2)
+        for (let a = 0; a < attrCount; a++) {
+          o += 6 + dv.getUint32(o + 2); // attrName(2) attrLen(4) info(len)
+        }
+        if (mutate && (accessFlags & FINAL) && names.has(utf8At(nameIndex))) {
+          dv.setUint16(memberOffset, accessFlags & ~FINAL);
+        }
+      }
+    };
+    walkMembers(false); // fields
+    walkMembers(true);  // methods
+    return serializeClass(parsed);
+  }
+
+  const api = { parseClass, serializeClass, editClassUtf8, readAccessFlags, isFinal, definalize, replaceBytes };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.PPClass = api;
 })(typeof window !== 'undefined' ? window : globalThis);
