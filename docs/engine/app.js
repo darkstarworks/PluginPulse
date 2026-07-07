@@ -8,6 +8,42 @@
 
   const $ = (id) => document.getElementById(id);
 
+  // Global "plugins future-proofed" tally, hosted on esmp.fun. Purely cosmetic:
+  // the page reads it on load and bumps it once per successful Generate. Every
+  // call is best-effort — no jar data is ever sent, and any failure just leaves
+  // the counter hidden rather than surfacing an error.
+  const PULSE_URL = 'https://api.esmp.fun/v2/pulse';
+  let pulseCount = null;
+
+  function renderCounter(n) {
+    if (typeof n !== 'number' || !isFinite(n)) return;
+    pulseCount = n;
+    const el = $('pulseCounter');
+    if (!el) return;
+    el.textContent = '';
+    const strong = document.createElement('strong');
+    strong.textContent = n.toLocaleString();
+    el.appendChild(strong);
+    el.appendChild(document.createTextNode(' plugins future-proofed'));
+    el.hidden = false;
+  }
+
+  async function loadCounter() {
+    try {
+      const d = await (await fetch(PULSE_URL, { method: 'GET' })).json();
+      if (d && typeof d.count === 'number') renderCounter(d.count);
+    } catch (_) { /* counter is optional — stay hidden on failure */ }
+  }
+
+  async function bumpCounter() {
+    // Reflect the tick immediately, then reconcile with the server's value.
+    if (pulseCount != null) renderCounter(pulseCount + 1);
+    try {
+      const d = await (await fetch(PULSE_URL, { method: 'POST' })).json();
+      if (d && typeof d.count === 'number') renderCounter(d.count);
+    } catch (_) { /* best-effort */ }
+  }
+
   async function loadAssets() {
     if (assets) return assets;
     const [core, tpl] = await Promise.all([
@@ -189,6 +225,7 @@
       status('Done — downloaded ' + base + '-pulse.jar.', 'ok');
       toast({ kind: 'ok', title: 'Updated jar downloaded',
         lines: [base + '-pulse.jar is in your downloads.', 'Test it on your own server before sharing it — the tool can\'t confirm the jar boots.'] });
+      bumpCounter();
     } catch (err) {
       status('Could not process this jar.', 'err');
       toast({ kind: 'err', title: 'Couldn\'t generate the jar',
@@ -216,5 +253,6 @@
     $('preview').addEventListener('click', preview);
     $('generate').addEventListener('click', generate);
     setupPriorities();
+    loadCounter();
   });
 })();

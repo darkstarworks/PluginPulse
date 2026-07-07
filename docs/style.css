@@ -29,6 +29,12 @@ main {
 h1 { font-size: 2rem; margin: 0 0 .5rem; }
 h2 { font-size: 1.15rem; margin: 0 0 .6rem; }
 
+/* Step heading with a right-aligned usage counter */
+.step-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.counter { font-size: .82rem; color: var(--muted); font-weight: 400; white-space: nowrap; }
+.counter strong { color: var(--accent); font-weight: 700; }
+.counter[hidden] { display: none; }
+
 .lede { color: var(--ink); font-size: 1.05rem; }
 .lede strong { color: var(--accent); }
 
@@ -86,6 +92,21 @@ button {
 }
 button:hover { border-color: var(--accent); }
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+
+/* Advanced settings (collapsed optional fields in step 3) */
+.advanced { margin-top: .9rem; border-top: 1px solid var(--line); padding-top: .2rem; }
+.advanced > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: .9rem;
+  padding: .55rem 0 .2rem;
+  list-style: none;
+  user-select: none;
+}
+.advanced > summary::-webkit-details-marker { display: none; }
+.advanced > summary::before { content: "\25B8"; color: var(--accent); margin-right: .45rem; }
+.advanced[open] > summary::before { content: "\25BE"; }
+.advanced > summary:hover { color: var(--ink); }
 
 .hint { color: var(--muted); font-size: .85rem; margin: .5rem 0 0; }
 .inspect {

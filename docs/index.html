@@ -25,7 +25,9 @@
 
   <ol class="steps">
     <li>
-      <h2>1. Choose your plugin jar</h2>
+      <h2 class="step-head">1. Choose your plugin jar
+        <span id="pulseCounter" class="counter" hidden></span>
+      </h2>
       <input type="file" id="file" accept=".jar">
       <button id="preview" type="button">Preview jar</button>
       <pre id="previewOut" class="inspect"></pre>
@@ -88,22 +90,26 @@
           <option value="auto-stage">auto-stage — download automatically when found</option>
         </select>
       </label>
-      <label>Command root <span class="opt">(optional)</span>
-        <input id="commandRoot" type="text" placeholder="e.g. /myplugin — self-registered if free">
-      </label>
-      <label>Permission <span class="opt">(optional)</span>
-        <input id="permission" type="text" placeholder="e.g. myplugin.admin — who sees notices">
-      </label>
       <label>Contact <span class="opt">(recommended)</span>
         <input id="contact" type="text" placeholder="email or URL — required by Modrinth's API rules">
       </label>
-      <label>Release track <span class="opt">(optional)</span>
-        <input id="track" type="text" placeholder="e.g. mc26 — follow a &quot;-track&quot; release line">
-      </label>
-      <label>Check interval (hours) <span class="opt">(optional)</span>
-        <input id="interval" type="number" min="1" placeholder="6">
-      </label>
-      <label class="check"><input id="upgrade" type="checkbox"> Re-inject a jar that already has PluginPulse</label>
+
+      <details class="advanced">
+        <summary>Advanced settings</summary>
+        <label>Command root <span class="opt">(optional)</span>
+          <input id="commandRoot" type="text" placeholder="e.g. /myplugin — self-registered if free">
+        </label>
+        <label>Permission <span class="opt">(optional)</span>
+          <input id="permission" type="text" placeholder="e.g. myplugin.admin — who sees notices">
+        </label>
+        <label>Release track <span class="opt">(optional)</span>
+          <input id="track" type="text" placeholder="e.g. mc26 — follow a &quot;-track&quot; release line">
+        </label>
+        <label>Check interval (hours) <span class="opt">(optional)</span>
+          <input id="interval" type="number" min="1" placeholder="6">
+        </label>
+        <label class="check"><input id="upgrade" type="checkbox"> Re-inject a jar that already has PluginPulse</label>
+      </details>
     </li>
 
     <li>
