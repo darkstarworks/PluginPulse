@@ -157,6 +157,87 @@ class SourceParseTest {
         assertTrue(info.downloadUrl().startsWith("https://hangarcdn.papermc.io/"));
     }
 
+    // ==== Jenkins ====
+
+    // Trimmed real payloads from ci.athion.net (FAWE) and ci.lucko.me (LuckPerms),
+    // captured 2026-07-10 from <job>/lastSuccessfulBuild/api/json?tree=...
+    private static final String JENKINS_FAWE_JSON = """
+            {"_class":"hudson.model.FreeStyleBuild","artifacts":[
+              {"fileName":"FastAsyncWorldEdit-Bukkit-2.15.3-SNAPSHOT-1348.jar","relativePath":"artifacts/FastAsyncWorldEdit-Bukkit-2.15.3-SNAPSHOT-1348.jar"},
+              {"fileName":"FastAsyncWorldEdit-CLI-2.15.3-SNAPSHOT-1348.jar","relativePath":"artifacts/FastAsyncWorldEdit-CLI-2.15.3-SNAPSHOT-1348.jar"},
+              {"fileName":"FastAsyncWorldEdit-Paper-2.15.3-SNAPSHOT-1348.jar","relativePath":"artifacts/FastAsyncWorldEdit-Paper-2.15.3-SNAPSHOT-1348.jar"}],
+             "number":1348,"result":"SUCCESS",
+             "url":"https://ci.athion.net/job/FastAsyncWorldEdit/1348/"}
+            """;
+
+    private static final String JENKINS_LUCKPERMS_JSON = """
+            {"_class":"hudson.model.FreeStyleBuild","artifacts":[
+              {"fileName":"LuckPerms-Bukkit-5.5.59.jar","relativePath":"bukkit/loader/build/libs/LuckPerms-Bukkit-5.5.59.jar"},
+              {"fileName":"LuckPerms-Bukkit-Legacy-5.5.59.jar","relativePath":"bukkit-legacy/loader/build/libs/LuckPerms-Bukkit-Legacy-5.5.59.jar"},
+              {"fileName":"LuckPerms-Velocity-5.5.59.jar","relativePath":"velocity/build/libs/LuckPerms-Velocity-5.5.59.jar"}],
+             "number":1647,"result":"SUCCESS","url":"https://ci.lucko.me/job/LuckPerms/1647/"}
+            """;
+
+    @Test
+    void jenkinsArtifactRegexPicksPaperJarAndDerivesVersion() {
+        UpdateInfo info = JenkinsSource.parse(JENKINS_FAWE_JSON, JenkinsSource.artifactRegex("Paper"));
+        assertNotNull(info);
+        assertEquals("2.15.3-SNAPSHOT-1348", info.version());
+        assertEquals("FastAsyncWorldEdit-Paper-2.15.3-SNAPSHOT-1348.jar", info.fileName());
+        assertEquals("https://ci.athion.net/job/FastAsyncWorldEdit/1348/artifact/artifacts/FastAsyncWorldEdit-Paper-2.15.3-SNAPSHOT-1348.jar",
+                info.downloadUrl());
+        assertTrue(info.hashes().isEmpty());
+        assertTrue(info.restartRequired());
+        assertEquals("https://ci.athion.net/job/FastAsyncWorldEdit/1348/", info.releasePageUrl());
+    }
+
+    @Test
+    void jenkinsDefaultFilterTakesFirstJar() {
+        UpdateInfo info = JenkinsSource.parse(JENKINS_FAWE_JSON, n -> n.toLowerCase().endsWith(".jar"));
+        assertEquals("FastAsyncWorldEdit-Bukkit-2.15.3-SNAPSHOT-1348.jar", info.fileName());
+    }
+
+    @Test
+    void jenkinsRegexIsAnchoredEnoughToExcludeLegacy() {
+        UpdateInfo info = JenkinsSource.parse(JENKINS_LUCKPERMS_JSON, JenkinsSource.artifactRegex("Bukkit-\\d"));
+        assertNotNull(info);
+        assertEquals("5.5.59", info.version());
+        assertEquals("LuckPerms-Bukkit-5.5.59.jar", info.fileName());
+        assertEquals("https://ci.lucko.me/job/LuckPerms/1647/artifact/bukkit/loader/build/libs/LuckPerms-Bukkit-5.5.59.jar",
+                info.downloadUrl());
+    }
+
+    @Test
+    void jenkinsNoMatchingArtifactReturnsNull() {
+        assertNull(JenkinsSource.parse(JENKINS_FAWE_JSON, JenkinsSource.artifactRegex("Velocity")));
+    }
+
+    @Test
+    void jenkinsNonSuccessBuildRejected() {
+        String failing = JENKINS_FAWE_JSON.replace("\"SUCCESS\"", "\"FAILURE\"");
+        assertNull(JenkinsSource.parse(failing, JenkinsSource.artifactRegex("Paper")));
+    }
+
+    @Test
+    void jenkinsRelativePathWithSpacesIsEncoded() {
+        String json = """
+                {"artifacts":[{"fileName":"My Plugin-1.2.jar","relativePath":"build/libs dir/My Plugin-1.2.jar"}],
+                 "number":7,"result":"SUCCESS","url":"https://ci.example.org/job/My%20Plugin/7/"}
+                """;
+        UpdateInfo info = JenkinsSource.parse(json, name -> true);
+        assertEquals("https://ci.example.org/job/My%20Plugin/7/artifact/build/libs%20dir/My%20Plugin-1.2.jar",
+                info.downloadUrl());
+        assertEquals("1.2", info.version());
+    }
+
+    @Test
+    void jenkinsVersionFallsBackToBuildNumber() {
+        assertEquals("2.15.3-SNAPSHOT-1348",
+                JenkinsSource.deriveVersion("FastAsyncWorldEdit-Paper-2.15.3-SNAPSHOT-1348.jar", 1348));
+        assertEquals("5.5.59", JenkinsSource.deriveVersion("LuckPerms-Bukkit-5.5.59.jar", 1647));
+        assertEquals("42", JenkinsSource.deriveVersion("plugin.jar", 42));
+    }
+
     // ==== Custom JSON ====
 
     private static final String CUSTOM_JSON = """

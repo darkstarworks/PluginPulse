@@ -98,7 +98,48 @@ public final class Version implements Comparable<Version> {
         if (prerelease == null && o.prerelease == null) return 0;
         if (prerelease == null) return 1;   // release > pre-release
         if (o.prerelease == null) return -1;
-        return prerelease.compareToIgnoreCase(o.prerelease);
+        return comparePrerelease(prerelease, o.prerelease);
+    }
+
+    /**
+     * Compare pre-release identifiers with embedded numbers ordered numerically,
+     * so {@code beta2 < beta10} and {@code SNAPSHOT-999 < SNAPSHOT-1000} (Jenkins
+     * build numbers land here). Both strings are walked as alternating runs of
+     * digits and non-digits: digit runs compare as numbers, other runs compare
+     * case-insensitively, and when one string is a prefix of the other the longer
+     * one wins ({@code alpha < alpha.1}, matching SemVer).
+     */
+    static int comparePrerelease(String a, String b) {
+        int i = 0, j = 0;
+        while (i < a.length() && j < b.length()) {
+            if (Character.isDigit(a.charAt(i)) && Character.isDigit(b.charAt(j))) {
+                int is = i, js = j;
+                while (i < a.length() && Character.isDigit(a.charAt(i))) i++;
+                while (j < b.length() && Character.isDigit(b.charAt(j))) j++;
+                int cmp = compareDigitRuns(a.substring(is, i), b.substring(js, j));
+                if (cmp != 0) return cmp;
+            } else {
+                int cmp = Character.compare(Character.toLowerCase(a.charAt(i)), Character.toLowerCase(b.charAt(j)));
+                if (cmp != 0) return cmp;
+                i++;
+                j++;
+            }
+        }
+        return Integer.compare(a.length() - i, b.length() - j);
+    }
+
+    /** Numeric comparison of two all-digit strings of any length. */
+    private static int compareDigitRuns(String a, String b) {
+        String sa = stripLeadingZeros(a);
+        String sb = stripLeadingZeros(b);
+        if (sa.length() != sb.length()) return Integer.compare(sa.length(), sb.length());
+        return sa.compareTo(sb);
+    }
+
+    private static String stripLeadingZeros(String s) {
+        int i = 0;
+        while (i < s.length() - 1 && s.charAt(i) == '0') i++;
+        return s.substring(i);
     }
 
     @Override

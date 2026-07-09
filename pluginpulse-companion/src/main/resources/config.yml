@@ -4,7 +4,7 @@
 #
 #  For each plugin you want managed, add an entry under "plugins:" below. The key
 #  must be the plugin's EXACT name as shown in /plugins. Give it ONE update source
-#  (modrinth, github, or hangar) and a mode.
+#  (modrinth, github, hangar, or jenkins) and a mode.
 #
 #  After editing, run:  /pluginpulse reload
 # ─────────────────────────────────────────────────────────────────────────────
@@ -30,6 +30,14 @@ plugins:
   # HangarPlugin:
   #   hangar: project-slug          # its Hangar project slug
   #   mode: check-only              # silent: only /pluginpulse shows the result
+  #
+  # FastAsyncWorldEdit:             # a plugin that publishes CI snapshots on Jenkins
+  #   jenkins: https://ci.athion.net/job/FastAsyncWorldEdit/   # the JOB page URL
+  #   jenkins-artifact: "Paper"     # picks the right jar when a build ships several
+  #                                 # (regex, matched anywhere in the file name)
+  #   mode: notify
+  #   require-hash: false           # Jenkins publishes no checksums; without this,
+  #                                 # download/auto modes refuse the file
 
 # What "mode" means:
 #   off          — ignore this plugin

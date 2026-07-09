@@ -2,6 +2,7 @@ package io.github.darkstarworks.pluginpulse;
 
 import io.github.darkstarworks.pluginpulse.source.GitHubReleasesSource;
 import io.github.darkstarworks.pluginpulse.source.HangarSource;
+import io.github.darkstarworks.pluginpulse.source.JenkinsSource;
 import io.github.darkstarworks.pluginpulse.source.ModrinthSource;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -63,8 +64,9 @@ public final class PluginPulse {
             String modrinth = trimToNull(cfg.getString("modrinth"));
             String github = trimToNull(cfg.getString("github"));
             String hangar = trimToNull(cfg.getString("hangar"));
-            if (modrinth == null && github == null && hangar == null) {
-                plugin.getLogger().warning("PluginPulse: pluginpulse.yml has no modrinth/github/hangar source — updater disabled.");
+            String jenkins = trimToNull(cfg.getString("jenkins"));
+            if (modrinth == null && github == null && hangar == null && jenkins == null) {
+                plugin.getLogger().warning("PluginPulse: pluginpulse.yml has no modrinth/github/hangar/jenkins source — updater disabled.");
                 return null;
             }
 
@@ -87,7 +89,7 @@ public final class PluginPulse {
             // The order is taken from the optional "source-order" list when present
             // (e.g. [hangar, modrinth]); any configured source omitted from the list
             // is appended afterwards, and the historical default is modrinth > github
-            // > hangar when no list is given.
+            // > hangar > jenkins when no list is given (CI snapshots rank last).
             java.util.Map<String, io.github.darkstarworks.pluginpulse.source.UpdateSource> available = new java.util.LinkedHashMap<>();
             // Optional token for a PRIVATE GitHub repo — supplied literally or as
             // a ${ENV_VAR} reference (see Secrets). Authenticates both the version
@@ -96,6 +98,16 @@ public final class PluginPulse {
             if (modrinth != null) available.put("modrinth", new ModrinthSource(modrinth));
             if (github != null) available.put("github", new GitHubReleasesSource(github, githubToken, null));
             if (hangar != null) available.put("hangar", new HangarSource(hangar));
+            if (jenkins != null) {
+                available.put("jenkins", new JenkinsSource(jenkins,
+                        jenkinsArtifactFilter(plugin, cfg.getString("jenkins-artifact"))));
+                // Jenkins archives raw CI artifacts with no checksums; with the
+                // require-hash default (true) a download would always be refused.
+                if (!cfg.contains("require-hash")) {
+                    plugin.getLogger().info("PluginPulse: the jenkins source publishes no checksums — "
+                            + "download/auto modes need require-hash: false in pluginpulse.yml.");
+                }
+            }
 
             java.util.List<String> ordered = new java.util.ArrayList<>();
             for (String raw : cfg.getStringList("source-order")) {
@@ -189,6 +201,23 @@ public final class PluginPulse {
                     + "module isn't bundled — updates will stage for a restart instead.");
         }
         return engine;
+    }
+
+    /**
+     * Compile the optional {@code jenkins-artifact} regex; an invalid pattern
+     * logs a warning and falls back to the default jar filter instead of
+     * disabling the whole updater.
+     */
+    private static java.util.function.Predicate<String> jenkinsArtifactFilter(JavaPlugin plugin, String regex) {
+        String r = trimToNull(regex);
+        if (r == null) return null;
+        try {
+            return JenkinsSource.artifactRegex(r);
+        } catch (java.util.regex.PatternSyntaxException e) {
+            plugin.getLogger().warning("PluginPulse: invalid jenkins-artifact regex '" + r
+                    + "' — using the default .jar filter instead.");
+            return null;
+        }
     }
 
     private static boolean addSource(Updater.Builder builder, io.github.darkstarworks.pluginpulse.source.UpdateSource source, boolean primarySet) {

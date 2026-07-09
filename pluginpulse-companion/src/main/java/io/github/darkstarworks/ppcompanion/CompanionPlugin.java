@@ -5,6 +5,7 @@ import io.github.darkstarworks.pluginpulse.UpdateSubcommand;
 import io.github.darkstarworks.pluginpulse.Updater;
 import io.github.darkstarworks.pluginpulse.source.GitHubReleasesSource;
 import io.github.darkstarworks.pluginpulse.source.HangarSource;
+import io.github.darkstarworks.pluginpulse.source.JenkinsSource;
 import io.github.darkstarworks.pluginpulse.source.ModrinthSource;
 import io.github.darkstarworks.pluginpulse.source.UpdateSource;
 import org.bukkit.command.Command;
@@ -81,14 +82,24 @@ public final class CompanionPlugin extends JavaPlugin {
         String modrinth = trimToNull(entry.getString("modrinth"));
         String github = trimToNull(entry.getString("github"));
         String hangar = trimToNull(entry.getString("hangar"));
+        String jenkins = trimToNull(entry.getString("jenkins"));
         // Optional token for a PRIVATE GitHub repo (literal or ${ENV_VAR}); it
         // authenticates the check and the download alike.
         String githubToken = io.github.darkstarworks.pluginpulse.Secrets.resolve(entry.getString("github-token"));
         if (modrinth != null) sources.add(new ModrinthSource(modrinth));
         if (github != null) sources.add(new GitHubReleasesSource(github, githubToken, null));
         if (hangar != null) sources.add(new HangarSource(hangar));
+        if (jenkins != null) {
+            sources.add(new JenkinsSource(jenkins, jenkinsArtifactFilter(name, entry.getString("jenkins-artifact"))));
+            // Jenkins archives raw CI artifacts with no checksums; with the
+            // require-hash default (true) a download would always be refused.
+            if (!entry.contains("require-hash")) {
+                getLogger().info(name + ": the jenkins source publishes no checksums — "
+                        + "download/auto modes need require-hash: false for this entry.");
+            }
+        }
         if (sources.isEmpty()) {
-            skipped.put(name, "no modrinth/github/hangar source configured");
+            skipped.put(name, "no modrinth/github/hangar/jenkins source configured");
             return;
         }
 
@@ -227,6 +238,19 @@ public final class CompanionPlugin extends JavaPlugin {
             case "auto-stage", "auto" -> UpdateMode.AUTO_STAGE;
             default -> UpdateMode.NOTIFY;
         };
+    }
+
+    /** Compile the optional artifact regex; invalid patterns warn and use the default filter. */
+    private java.util.function.Predicate<String> jenkinsArtifactFilter(String name, String regex) {
+        String r = trimToNull(regex);
+        if (r == null) return null;
+        try {
+            return JenkinsSource.artifactRegex(r);
+        } catch (java.util.regex.PatternSyntaxException e) {
+            getLogger().warning(name + ": invalid jenkins-artifact regex '" + r
+                    + "' — using the default .jar filter instead.");
+            return null;
+        }
     }
 
     private static String trimToNull(String s) {

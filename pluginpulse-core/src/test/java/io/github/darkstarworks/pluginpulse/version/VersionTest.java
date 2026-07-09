@@ -54,6 +54,23 @@ class VersionTest {
     }
 
     @Test
+    void prereleaseNumbersCompareNumerically() {
+        // Embedded numbers order as numbers, not text (beta9 < beta10).
+        assertTrue(Version.parse("1.2.0-beta10").isNewerThan(Version.parse("1.2.0-beta9")));
+        assertTrue(Version.parse("1.2.0-beta02").isNewerThan(Version.parse("1.2.0-beta1")));
+        // Jenkins CI builds: the build number rides in the pre-release part.
+        assertTrue(Version.parse("2.15.3-SNAPSHOT-1000").isNewerThan(Version.parse("2.15.3-SNAPSHOT-999")));
+        assertTrue(Version.parse("2.15.3-SNAPSHOT-1349").isNewerThan(Version.parse("2.15.3-SNAPSHOT-1348")));
+        assertFalse(Version.parse("2.15.3-SNAPSHOT-1348").isNewerThan(Version.parse("2.15.3-SNAPSHOT-1348")));
+        // Installed FAWE reports a ";commit" tail after the build number; the same
+        // build must not look like an update, and a newer build still must.
+        assertFalse(Version.parse("2.15.3-SNAPSHOT-1348").isNewerThan(Version.parse("2.15.3-SNAPSHOT-1348;bd70485")));
+        assertTrue(Version.parse("2.15.3-SNAPSHOT-1349").isNewerThan(Version.parse("2.15.3-SNAPSHOT-1348;bd70485")));
+        // A version bump outranks any build number.
+        assertTrue(Version.parse("2.15.4-SNAPSHOT-1").isNewerThan(Version.parse("2.15.3-SNAPSHOT-1348")));
+    }
+
+    @Test
     void garbageSegmentsDoNotThrow() {
         assertEquals(0, Version.parse("1.x.3").compareTo(Version.parse("1.0.3")));
         assertEquals(0, Version.parse("1.2rc1.0").compareTo(Version.parse("1.2.0")));

@@ -23,8 +23,8 @@ A small, dependency-free update-checker library for Paper **and Spigot**
 plugins. Shade it in, point it at where you publish releases, and your plugin
 gains:
 
-- **Multi-source update checking** — Modrinth, GitHub Releases, Hangar, or any
-  self-hosted JSON manifest, with ordered fallbacks.
+- **Multi-source update checking** — Modrinth, GitHub Releases, Hangar, Jenkins
+  CI, or any self-hosted JSON manifest, with ordered fallbacks.
 - **Clickable admin notifications** — MiniMessage console + in-game notices on
   login, permission-gated, fully re-brandable.
 - **Version intelligence** — semver-ish comparison, pre-release awareness
@@ -77,6 +77,8 @@ tasks.shadowJar {
 modrinth: my-project-slug        # Modrinth project slug (optional)
 github: me/my-plugin             # GitHub "owner/repo" for Releases (optional)
 hangar: my-project               # Hangar project slug (optional)
+# jenkins: https://ci.example.org/job/MyPlugin/   # Jenkins job URL (optional)
+# jenkins-artifact: "Paper"      # optional regex: which jar when a build ships several
 
 permission: myplugin.admin       # who sees notices / can run /myplugin update
 command-root: /myplugin          # enables clickable buttons; self-registered if free
@@ -181,6 +183,7 @@ on the next boot; if it didn't, the plugin warns instead of re-staging forever.
 | Modrinth | `new ModrinthSource("slug")` | sha1 + sha512 | 300 req/min limit; optional loader/game-version filters |
 | GitHub Releases | `new GitHubReleasesSource("owner/repo")` | `digest` field or `.sha256` sidecar asset | 60 req/hr unauthenticated — keep intervals long; optional token |
 | Hangar | `new HangarSource("slug")` | sha256 | platform selectable (`PAPER`/`VELOCITY`/`WATERFALL`) |
+| Jenkins | `new JenkinsSource("https://ci.…/job/X/")` | none — download modes need `require-hash: false` | last successful build; optional artifact-name filter |
 | Custom JSON | `new CustomJsonSource(url, headers)` | any | self-hosted manifest; headers carry auth (e.g. licence keys) |
 
 ### Custom manifest format
