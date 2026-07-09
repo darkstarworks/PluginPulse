@@ -80,7 +80,17 @@ public final class JenkinsSource implements UpdateSource {
 
     /** Parse a {@code lastSuccessfulBuild/api/json} payload. Null when no artifact matches. */
     static UpdateInfo parse(String json, Predicate<String> artifactFilter) {
-        JsonObject build = JsonParser.parseString(json).getAsJsonObject();
+        String body = json == null ? "" : json.trim();
+        // Some Jenkins servers block anonymous API access (a proxy rule on
+        // ci.citizensnpcs.co, a Cloudflare challenge on ci.dmulloy2.net) and
+        // answer with an HTML page; say so instead of a raw JSON parse error.
+        if (!body.startsWith("{")) {
+            throw new IllegalStateException("the Jenkins server answered with "
+                    + (body.startsWith("<") ? "an HTML page" : "something that isn't JSON")
+                    + " instead of build data — it is probably blocking anonymous API access"
+                    + " (login wall, proxy rule, or Cloudflare challenge), so this job can't be followed");
+        }
+        JsonObject build = JsonParser.parseString(body).getAsJsonObject();
         // lastSuccessfulBuild is SUCCESS by definition; guard anyway in case the
         // configured URL points somewhere else (a specific build, a wrong job).
         if (build.has("result") && !build.get("result").isJsonNull()

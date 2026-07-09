@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SourceParseTest {
@@ -228,6 +229,21 @@ class SourceParseTest {
         assertEquals("https://ci.example.org/job/My%20Plugin/7/artifact/build/libs%20dir/My%20Plugin-1.2.jar",
                 info.downloadUrl());
         assertEquals("1.2", info.version());
+    }
+
+    @Test
+    void jenkinsHtmlResponseGetsFriendlyError() {
+        // ci.citizensnpcs.co (proxy rule) and ci.dmulloy2.net (Cloudflare) answer
+        // API calls with HTML; the error should say so, not be a JSON parse trace.
+        String html = "<html><head><title>404 Not Found</title></head></html>";
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> JenkinsSource.parse(html, name -> true));
+        assertTrue(e.getMessage().contains("HTML page"));
+        assertTrue(e.getMessage().contains("blocking anonymous API access"));
+        // Non-HTML garbage (an empty body, a plain-text error) gets the generic wording.
+        IllegalStateException e2 = assertThrows(IllegalStateException.class,
+                () -> JenkinsSource.parse("Access denied", name -> true));
+        assertTrue(e2.getMessage().contains("isn't JSON"));
     }
 
     @Test
