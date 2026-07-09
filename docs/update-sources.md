@@ -66,8 +66,8 @@ hangar: My-Plugin
 
 For plugins whose builds come from a **Jenkins** server — for example
 FastAsyncWorldEdit ([ci.athion.net/job/FastAsyncWorldEdit](https://ci.athion.net/job/FastAsyncWorldEdit/)),
-LuckPerms snapshots (ci.lucko.me), EssentialsX dev builds, Citizens, and many
-others. PluginPulse follows the job's **last successful build**.
+LuckPerms snapshots (ci.lucko.me), EssentialsX dev builds, and many others.
+PluginPulse follows the job's **last successful build**.
 
 - Use the **job page URL** — the page listing the build history, ending in
   `/job/<Name>/`.
@@ -88,6 +88,32 @@ require-hash: false           # needed for download/auto modes — see below
 > releases — every successful build is offered, so expect frequent updates and
 > the occasional broken build. Prefer Modrinth/Hangar/GitHub when the plugin
 > publishes proper releases there.
+
+### Known-good jobs and their filters
+
+Verified against the live servers (July 2026). Where a build archives several
+jars, the listed `jenkins-artifact` picks the right one:
+
+| Plugin | `jenkins:` | `jenkins-artifact:` |
+|---|---|---|
+| FastAsyncWorldEdit | `https://ci.athion.net/job/FastAsyncWorldEdit/` | `Paper` (or `Bukkit`) |
+| LuckPerms | `https://ci.lucko.me/job/LuckPerms/` | `Bukkit-5` (plain `Bukkit` would also match `Bukkit-Legacy`) |
+| spark | `https://ci.lucko.me/job/spark/` | `paper` (or `bukkit`) |
+| EssentialsX | `https://ci.ender.zone/job/EssentialsX/` | `^EssentialsX-` for the core; each module jar is also archived |
+| ViaVersion | `https://ci.viaversion.com/job/ViaVersion/` | *(none needed — single jar)* |
+| PlaceholderAPI | `https://ci.extendedclip.com/job/PlaceholderAPI/` | `PlaceholderAPI-[\d.]+\.jar$` — **required**; without it the `-plain` classifier jar is picked first |
+| BungeeCord | `https://ci.md-5.net/job/BungeeCord/` | `^BungeeCord` — module command jars are archived alongside it |
+| HolographicDisplays | `https://ci.codemc.io/job/filoghost/job/HolographicDisplays/` | *(none needed)* — nested CodeMC folder jobs work with the plain job-page URL |
+
+The PlaceholderAPI row shows the general rule: when a job archives classifier
+jars (`-plain`, `-shaded`, `-all`, per-platform variants), set an explicit
+`jenkins-artifact` rather than trusting the default "first jar that isn't
+`-sources`/`-javadoc`" pick.
+
+Some Jenkins servers can't be used: **ci.citizensnpcs.co** (Citizens, Denizen)
+blocks the JSON API at its web proxy, and **ci.dmulloy2.net** (ProtocolLib)
+sits behind a Cloudflare challenge — both return HTML instead of JSON, so the
+check fails.
 
 ## Self-hosted (advanced)
 
