@@ -19,7 +19,7 @@ val jdkVersion: Int = if (isMc26) 25 else 21
 
 allprojects {
     group = "io.github.darkstarworks"
-    version = "0.7.0"
+    version = "0.8.0"
 }
 
 subprojects {
